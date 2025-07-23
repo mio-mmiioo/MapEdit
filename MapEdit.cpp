@@ -42,8 +42,6 @@ int MapEdit::GetMap(Point p) const
 	//pが、配列の範囲外の時はassertにひっかかる
 	assert(p.x >= 0 && p.x < cfg_.MAP_WIDTH);
 	assert(p.y >= 0 && p.y < cfg_.MAP_HEIGHT);
-	//assert(p.x >= 0 && p.x < cfg_.MAP_EDIT_VIEW_X + ScrollOffset_.x);
-	//assert(p.y >= 0 && p.y < cfg_.MAP_EDIT_VIEW_Y + ScrollOffset_.y);
 	return myMap_[p.y * cfg_.MAP_WIDTH + p.x]; //y行x列の値を取得する
 }
 
@@ -69,12 +67,12 @@ void MapEdit::Update()
 
 		if (CheckHitKey(KEY_INPUT_LSHIFT)) //Rキーを押しているなら
 		{
-			SetMap({ gridX + ScrollOffset_.x, gridY + ScrollOffset_.y }, -1); //マップに値をセット（-1は何もない状態）
+			SetMap({ gridX, gridY }, -1); //マップに値をセット（-1は何もない状態）
 			return; //マップチップを削除したらここで終了
 		}
 		else if (mapChip && mapChip->IsHold()) //マップチップを持っているなら
 		{
-			SetMap({ gridX + ScrollOffset_.x, gridY + ScrollOffset_.y }, mapChip->GetHoldImage()); //マップに値をセット
+			SetMap({ gridX, gridY }, mapChip->GetHoldImage()); //マップに値をセット
 		}
 	}
 
@@ -109,7 +107,7 @@ void MapEdit::Draw()
 		{
 			int gx = i + ScrollOffset_.x;
 			int gy = j + ScrollOffset_.y;
-			int value = GetMap({ i + gx,j + gy });
+			int value = GetMap({ gx, gy });
 			if (value != -1) //-1なら何も描画しない
 			{
 				DrawGraph(cfg_.LEFT_MARGIN + i * cfg_.MAP_IMAGE_SIZE, cfg_.TOP_MARGIN + j * cfg_.MAP_IMAGE_SIZE, value, TRUE);
@@ -137,7 +135,7 @@ void MapEdit::Draw()
 			assert(j >= 0 && j < cfg_.MAP_EDIT_VIEW_X);
 			int gx = i + ScrollOffset_.x;
 			int gy = j + ScrollOffset_.y;
-			int value = selectedChip_[(j + gy)* cfg_.MAP_WIDTH + i + gx];
+			int value = selectedChip_[ gy * cfg_.MAP_WIDTH + gx];
 			if (value != -1) //-1なら何も描画しない
 			{
 				DrawGraph(cfg_.LEFT_MARGIN + i * cfg_.MAP_IMAGE_SIZE, cfg_.TOP_MARGIN + j * cfg_.MAP_IMAGE_SIZE, value, TRUE);
@@ -149,7 +147,7 @@ void MapEdit::Draw()
 	}
 
 	SetDrawBlendMode(DX_BLENDMODE_ALPHA, 128);
-	DrawBox(cfg_.LEFT_MARGIN + 0, cfg_.TOP_MARGIN + 0, cfg_.LEFT_MARGIN + cfg_.MAP_WIDTH * cfg_.MAP_IMAGE_SIZE, cfg_.TOP_MARGIN + cfg_.MAP_HEIGHT * cfg_.MAP_IMAGE_SIZE, GetColor(255, 255, 0), FALSE, 5);
+	DrawBox(cfg_.LEFT_MARGIN + 0, cfg_.TOP_MARGIN + 0, cfg_.LEFT_MARGIN + cfg_.MAP_EDIT_VIEW_X * cfg_.MAP_IMAGE_SIZE, cfg_.TOP_MARGIN + cfg_.MAP_EDIT_VIEW_Y * cfg_.MAP_IMAGE_SIZE, GetColor(255, 255, 0), FALSE, 5);
 	for (int j = 0; j < cfg_.MAP_EDIT_VIEW_Y; j++) {
 		for (int i = 0; i < cfg_.MAP_EDIT_VIEW_X; i++) {
 			DrawLine(cfg_.LEFT_MARGIN + i * cfg_.MAP_IMAGE_SIZE, cfg_.TOP_MARGIN + j * cfg_.MAP_IMAGE_SIZE,
