@@ -6,11 +6,6 @@
 
 namespace
 {
-	//const int MAP_WIDTH = { 20 };
-	//const int MAP_HEIGHT = { 20 };
-	//const int MAP_IMAGE_SIZE = { 32 }; // 画像のサイズ
-	//const int LEFT_MARGIN = { 100 };
-	//const int TOP_MARGIN = { 40 };
 }
 
 
@@ -30,9 +25,11 @@ public:
 	void Draw() override;
 	void SaveMapData();
 	void LoadMapData();
-	void CopyMapData(Point p, Point mouse);
 
 private:
+	void ClearMap();
+
+
 	MapEditConfig cfg_;//マップチップの設定を保持する
 	std::vector<int> myMap_; //マップの配列
 	Rect mapEditRect_; //マップ領域の矩形
@@ -40,6 +37,7 @@ private:
 	bool isInMapEditArea_; //マップエディタ領域内にいるかどうか
 
 	std::vector<int> selectedChip_;
-	std::vector<int> copyChips_;
+
+	Point ScrollOffset_; //スクロールオフセット これマップチップにも同じの書いてるから統一したい、、、
 };
 

@@ -1,3 +1,5 @@
+#define NOMINMAX
+
 #include <windows.h>
 #include "MapEdit.h"
 #include <cassert>
@@ -10,11 +12,12 @@
 #include <string>
 #include <iostream>
 #include "MapEditConfig.h"
+#include <algorithm>
 
 MapEdit::MapEdit()
 	:GameObject(), cfg_(GetMapEditConfig()), myMap_(cfg_.MAP_WIDTH* cfg_.MAP_HEIGHT, -1),
 	selectedChip_(cfg_.MAP_WIDTH* cfg_.MAP_HEIGHT, -1),
-	copyChips_(cfg_.MAP_WIDTH* cfg_.MAP_HEIGHT, -1),
+	ScrollOffset_({0, 0}),
 	isInMapEditArea_(false) //マップエディタ領域内にいるかどうか
 {
 	mapEditRect_ = { cfg_.LEFT_MARGIN, cfg_.TOP_MARGIN, cfg_.MAP_WIDTH * cfg_.MAP_IMAGE_SIZE, cfg_.MAP_HEIGHT * cfg_.MAP_IMAGE_SIZE };
@@ -31,7 +34,6 @@ void MapEdit::SetMap(Point p, int value)
 	assert(p.x >= 0 && p.x < cfg_.MAP_WIDTH);
 	assert(p.y >= 0 && p.y < cfg_.MAP_HEIGHT);
 	myMap_[p.y * cfg_.MAP_WIDTH + p.x] = value; //y行x列にvalueをセットする
-
 }
 
 int MapEdit::GetMap(Point p) const
@@ -40,8 +42,9 @@ int MapEdit::GetMap(Point p) const
 	//pが、配列の範囲外の時はassertにひっかかる
 	assert(p.x >= 0 && p.x < cfg_.MAP_WIDTH);
 	assert(p.y >= 0 && p.y < cfg_.MAP_HEIGHT);
+	//assert(p.x >= 0 && p.x < cfg_.MAP_EDIT_VIEW_X + ScrollOffset_.x);
+	//assert(p.y >= 0 && p.y < cfg_.MAP_EDIT_VIEW_Y + ScrollOffset_.y);
 	return myMap_[p.y * cfg_.MAP_WIDTH + p.x]; //y行x列の値を取得する
-
 }
 
 void MapEdit::Update()
@@ -51,23 +54,14 @@ void MapEdit::Update()
 		return;
 	}
 	// マウスの座標がマップエディタ領域内にいるかどうかを判定する
-	isInMapEditArea_ = mousePos.x >= mapEditRect_.x && mousePos.x <= mapEditRect_.x + mapEditRect_.w &&
-		mousePos.y >= mapEditRect_.y && mousePos.y <= mapEditRect_.y + mapEditRect_.h;
-
-	//左上　mapEditRect_.x, mapEditRect_.y
-	//右上　mapEditRect_.x + mapEditRect_.w, mapEditRect_.y
-	//右下  mapEditRect_.x + mapEditRect_.w, mapEditRect_.y + mapEditRect_.h
-	//左下  mapEditRect_.x, mapEditRect_.y + mapEditRect_.h
-		// グリッド座標に変換
-	if (!isInMapEditArea_) {
-		return; //マップエディタ領域外なら何もしない
-	}
+	isInMapEditArea_ = mousePos.x >= mapEditRect_.x && mousePos.x <= mapEditRect_.x + mapEditRect_.w && mousePos.y >= mapEditRect_.y && mousePos.y <= mapEditRect_.y + mapEditRect_.h;
+	
+	if (!isInMapEditArea_) return; //マップエディタ領域外なら何もしない
 
 	int gridX = (mousePos.x - cfg_.LEFT_MARGIN) / cfg_.MAP_IMAGE_SIZE;
 	int gridY = (mousePos.y - cfg_.TOP_MARGIN) / cfg_.MAP_IMAGE_SIZE;
 
-	drawAreaRect_ = { cfg_.LEFT_MARGIN + gridX * cfg_.MAP_IMAGE_SIZE, cfg_.TOP_MARGIN + gridY * cfg_.MAP_IMAGE_SIZE,
-		cfg_.MAP_IMAGE_SIZE, cfg_.MAP_IMAGE_SIZE };
+	drawAreaRect_ = { cfg_.LEFT_MARGIN + gridX * cfg_.MAP_IMAGE_SIZE, cfg_.TOP_MARGIN + gridY * cfg_.MAP_IMAGE_SIZE, cfg_.MAP_IMAGE_SIZE, cfg_.MAP_IMAGE_SIZE };
 
 	if (Input::IsButtonKeep(MOUSE_INPUT_LEFT)) //左クリックでマップに値をセット
 	{
@@ -75,20 +69,25 @@ void MapEdit::Update()
 
 		if (CheckHitKey(KEY_INPUT_LSHIFT)) //Rキーを押しているなら
 		{
-			SetMap({ gridX, gridY }, -1); //マップに値をセット（-1は何もない状態）
+			SetMap({ gridX + ScrollOffset_.x, gridY + ScrollOffset_.y }, -1); //マップに値をセット（-1は何もない状態）
 			return; //マップチップを削除したらここで終了
 		}
 		else if (mapChip && mapChip->IsHold()) //マップチップを持っているなら
 		{
-			SetMap({ gridX, gridY }, mapChip->GetHoldImage()); //マップに値をセット
+			SetMap({ gridX + ScrollOffset_.x, gridY + ScrollOffset_.y }, mapChip->GetHoldImage()); //マップに値をセット
 		}
-
 	}
 
-	CopyMapData({ gridX, gridY }, mousePos);
+	if (Input::IsKeyDown(KEY_INPUT_LEFT))
+		ScrollOffset_.x = std::max(0, ScrollOffset_.x - 1);
+	if (Input::IsKeyDown(KEY_INPUT_RIGHT))
+		ScrollOffset_.x = std::min(std::max(0, cfg_.MAP_WIDTH - cfg_.MAP_EDIT_VIEW_X), ScrollOffset_.x + 1);
+	if (Input::IsKeyDown(KEY_INPUT_UP))
+		ScrollOffset_.y = std::max(0, ScrollOffset_.y - 1);
+	if (Input::IsKeyDown(KEY_INPUT_DOWN))
+		ScrollOffset_.y = std::min(std::max(0, cfg_.MAP_HEIGHT - cfg_.MAP_EDIT_VIEW_Y), ScrollOffset_.y + 1);
 
-	
-		if (Input::IsKeyDown(KEY_INPUT_S))
+	if (Input::IsKeyDown(KEY_INPUT_S))
 	{
 		SaveMapData();
 	}
@@ -96,47 +95,63 @@ void MapEdit::Update()
 	{
 		LoadMapData();
 	}
+	if (Input::IsKeyDown(KEY_INPUT_Q))
+	{
+		ClearMap();
+	}
 }
 
 void MapEdit::Draw()
-{//背景を描画する
-
-	for (int j = 0;j < cfg_.MAP_HEIGHT;j++)
+{
+	for (int j = 0;j < cfg_.MAP_EDIT_VIEW_Y;j++)
 	{
-		for (int i = 0; i < cfg_.MAP_WIDTH; i++)
+		for (int i = 0; i < cfg_.MAP_EDIT_VIEW_X; i++)
 		{
-			int value = GetMap({ i,j });
+			int gx = i + ScrollOffset_.x;
+			int gy = j + ScrollOffset_.y;
+			int value = GetMap({ i + gx,j + gy });
 			if (value != -1) //-1なら何も描画しない
 			{
-				DrawGraph(cfg_.LEFT_MARGIN + i * cfg_.MAP_IMAGE_SIZE, cfg_.TOP_MARGIN + j * cfg_.MAP_IMAGE_SIZE,
-					value, TRUE);
+				DrawGraph(cfg_.LEFT_MARGIN + i * cfg_.MAP_IMAGE_SIZE, cfg_.TOP_MARGIN + j * cfg_.MAP_IMAGE_SIZE, value, TRUE);
 			}
 		}
 	}
 
-	for (int j = 0;j < cfg_.MAP_HEIGHT;j++)
+	//for (int y = 0; y < cfg_.MAPCHIP_VIEW_Y; y++) {
+	//	for (int x = 0; x < cfg_.TILES_X; x++) {
+
+	//		int gx = x + ScrollOffset_.x;
+	//		int gy = y + ScrollOffset_.y;
+	//		int index = gy * cfg_.TILES_X + gx;
+	//		DrawGraph(originX + x * cfg_.TILE_PIX_SIZE,
+	//			originY + y * cfg_.TILE_PIX_SIZE,
+	//			bgHandle[index], TRUE);
+	//	}
+	//}
+
+	for (int j = 0;j < cfg_.MAP_EDIT_VIEW_Y;j++)
 	{
-		for (int i = 0; i < cfg_.MAP_WIDTH; i++)
+		for (int i = 0; i < cfg_.MAP_EDIT_VIEW_X; i++)
 		{
-			assert(i >= 0 && i < cfg_.MAP_WIDTH);
-			assert(j >= 0 && j < cfg_.MAP_HEIGHT);
-			int value = selectedChip_[j * cfg_.MAP_WIDTH + i];
+			assert(i >= 0 && i < cfg_.MAP_EDIT_VIEW_Y);
+			assert(j >= 0 && j < cfg_.MAP_EDIT_VIEW_X);
+			int gx = i + ScrollOffset_.x;
+			int gy = j + ScrollOffset_.y;
+			int value = selectedChip_[(j + gy)* cfg_.MAP_WIDTH + i + gx];
 			if (value != -1) //-1なら何も描画しない
 			{
 				DrawGraph(cfg_.LEFT_MARGIN + i * cfg_.MAP_IMAGE_SIZE, cfg_.TOP_MARGIN + j * cfg_.MAP_IMAGE_SIZE, value, TRUE);
 				DrawBox(cfg_.LEFT_MARGIN + i * cfg_.MAP_IMAGE_SIZE, cfg_.TOP_MARGIN + j * cfg_.MAP_IMAGE_SIZE, 					
 					cfg_.LEFT_MARGIN + i * cfg_.MAP_IMAGE_SIZE + cfg_.MAP_IMAGE_SIZE, cfg_.TOP_MARGIN + j * cfg_.MAP_IMAGE_SIZE + cfg_.MAP_IMAGE_SIZE,
 					GetColor(255, 255, 255), TRUE);
-
 			}
 		}
 	}
 
 	SetDrawBlendMode(DX_BLENDMODE_ALPHA, 128);
-	DrawBox(cfg_.LEFT_MARGIN + 0, cfg_.TOP_MARGIN + 0,
-		cfg_.LEFT_MARGIN + cfg_.MAP_WIDTH * cfg_.MAP_IMAGE_SIZE, cfg_.TOP_MARGIN + cfg_.MAP_HEIGHT * cfg_.MAP_IMAGE_SIZE, GetColor(255, 255, 0), FALSE, 5);
-	for (int j = 0; j < cfg_.MAP_HEIGHT; j++) {
-		for (int i = 0; i < cfg_.MAP_WIDTH; i++) {
+	DrawBox(cfg_.LEFT_MARGIN + 0, cfg_.TOP_MARGIN + 0, cfg_.LEFT_MARGIN + cfg_.MAP_WIDTH * cfg_.MAP_IMAGE_SIZE, cfg_.TOP_MARGIN + cfg_.MAP_HEIGHT * cfg_.MAP_IMAGE_SIZE, GetColor(255, 255, 0), FALSE, 5);
+	for (int j = 0; j < cfg_.MAP_EDIT_VIEW_Y; j++) {
+		for (int i = 0; i < cfg_.MAP_EDIT_VIEW_X; i++) {
 			DrawLine(cfg_.LEFT_MARGIN + i * cfg_.MAP_IMAGE_SIZE, cfg_.TOP_MARGIN + j * cfg_.MAP_IMAGE_SIZE,
 				cfg_.LEFT_MARGIN + (i + 1) * cfg_.MAP_IMAGE_SIZE, cfg_.TOP_MARGIN + j * cfg_.MAP_IMAGE_SIZE, GetColor(255, 255, 255), 1);
 			DrawLine(cfg_.LEFT_MARGIN + i * cfg_.MAP_IMAGE_SIZE, cfg_.TOP_MARGIN + j * cfg_.MAP_IMAGE_SIZE,
@@ -150,35 +165,24 @@ void MapEdit::Draw()
 			GetColor(255, 255, 0), TRUE);
 	}
 	SetDrawBlendMode(DX_BLENDMODE_NOBLEND, 0);
-
-
-
 }
 
 void MapEdit::SaveMapData()
 {
-	//頑張ってファイル選択ダイアログを出す回
 	TCHAR filename[255] = "";
 	OPENFILENAME ofn = { 0 };
 
 	ofn.lStructSize = sizeof(ofn);
-	//ウィンドウのオーナー＝親ウィンドウのハンドル
 	ofn.hwndOwner = GetMainWindowHandle();
 	ofn.lpstrFilter = "全てのファイル (*.*)\0*.*\0";
 	ofn.lpstrFile = filename;
 	ofn.nMaxFile = 255;
 	ofn.Flags = OFN_OVERWRITEPROMPT;
 
-
 	if (GetSaveFileName(&ofn))
 	{
 		printfDx("ファイルが選択された\n");
-		//ファイルを開いて、セーブ
-		//std::filesystem ファイル名だけ取り出す
-		//ofstreamを開く
 		std::ofstream openfile(filename);
-		//ファイルの選択がキャンセル
-		//printfDx("セーブがキャンセル\n");
 		openfile << "#TinyMapData\n";
 
 		MapChip* mc = FindGameObject<MapChip>();
@@ -211,12 +215,10 @@ void MapEdit::SaveMapData()
 
 void MapEdit::LoadMapData()
 {
-	//頑張ってファイル選択ダイアログを出す回
 	TCHAR filename[255] = "";
 	OPENFILENAME ifn = { 0 };
 
 	ifn.lStructSize = sizeof(ifn);
-	//ウィンドウのオーナー＝親ウィンドウのハンドル
 	ifn.hwndOwner = GetMainWindowHandle();
 	ifn.lpstrFilter = "全てのファイル (*.*)\0*.*\0";
 	ifn.lpstrFile = filename;
@@ -226,30 +228,19 @@ void MapEdit::LoadMapData()
 	if (GetOpenFileName(&ifn))
 	{
 		printfDx("ファイルが選択された→%s\n", filename);
-		//ファイルを開いて、セーブ
-		//std::filesystem ファイル名だけ取り出す
-		//ifstreamを開く input file stream
 		std::ifstream inputfile(filename);
-		//ファイルがオープンしたかどうかはチェックが必要
 		std::string line;
 
-		//マップチップの情報を取りたい！
 		MapChip* mc = FindGameObject<MapChip>();
 		myMap_.clear();//マップを空に！
 		while (std::getline(inputfile, line)) {
-			// 空行はスキップ
 			if (line.empty()) continue;
-			//printfDx("%s\n", line.c_str());
-			//ここに、読み込みの処理を書いていく！
+
 			if (line[0] != '#')
 			{
 				std::istringstream iss(line);
 				std::string tmp;//これに一個ずつ読み込んでいくよ
 				while (getline(iss, tmp, ',')) {
-					//if(tmp == -1)
-					//	myMap_.push_back( -1);
-					//else
-					//	myMap_.push_back(mc->GetHandle(tmp)); //マップにハンドルをセット
 					printfDx("%s ", tmp.c_str());
 					if (tmp == "-1")
 					{
@@ -280,24 +271,14 @@ void MapEdit::LoadMapData()
 	}
 }
 
-void MapEdit::CopyMapData(Point p, Point mouse)
+void MapEdit::ClearMap()
 {
-	if (Input::IsKeepKeyDown(KEY_INPUT_LCONTROL))
+	for (int j = 0;j < cfg_.MAP_HEIGHT;j++)
 	{
-		if (myMap_[p.x, p.y] != -1)
+		for (int i = 0; i < cfg_.MAP_WIDTH; i++)
 		{
-			selectedChip_[p.x, p.y] = GetMap(p);
-		}
-
-		if (Input::IsKeyDown(KEY_INPUT_C))
-		{
-			copyChips_ = selectedChip_;
-			selectedChip_ = { cfg_.MAP_WIDTH * cfg_.MAP_HEIGHT, -1 };
-		}
-
-		if (Input::IsKeyDown(KEY_INPUT_V))
-		{
-
+			Point p = { i, j };
+			SetMap(p , -1);
 		}
 	}
 }

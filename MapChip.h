@@ -21,6 +21,7 @@ public:
 	bool IsInChipArea(const Point& mouse) const;
 	Point ScreenToChipIndex(const Point& mouse) const;
 
+private:
 	MapChipConfig cfg_;//マップチップの設定を保持する
 	std::vector<int> bgHandle;
 	std::map<int, int> HandleToIndex;

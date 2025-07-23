@@ -10,32 +10,15 @@
 
 namespace
 {
-	////同じ名前の変数はあとでまとめましょう
-	//const int IMAGE_SIZE = { 32 }; // 画像のサイズ
-	//const int MAP_CHIP_WIDTH = { 16 };//チップの横並び数
-	//const int MAP_CHIP_HEIGHT = { 12 };//チップの縦並び数
-	//const int MAP_CHIP_NUM_X = { 8 };//マップチップウィンドウの横並び数
-	//const int MAP_CHIP_NUM_Y = { 24 };//マップチップウィンドウの縦並び数
-	//const int MAP_CHIP_WIN_WIDTH = { IMAGE_SIZE * MAP_CHIP_NUM_X };//ウィンドウの横幅
-	//const int MAP_CHIP_WIN_HEIGHT = { IMAGE_SIZE * MAP_CHIP_NUM_Y };//ウィンドウの縦幅
-
 }
 
 MapChip::MapChip()
-	: GameObject(), isUpdate_(false), isInMapChipArea_(false), selectedIndex_(-1)
-	, cfg_(GetMapChipConfig()), selected_({ 0,0 }), isHold_(false), ScrollOffset_({ 0,0 })
+	: GameObject(), isUpdate_(false), isInMapChipArea_(false), selectedIndex_(-1), 
+	cfg_(GetMapChipConfig()), selected_({ 0,0 }), isHold_(false), ScrollOffset_({ 0,0 })
 {
-
-
 	bgHandle.resize(cfg_.TILE_PIX_SIZE * cfg_.TILES_X * cfg_.TILES_Y, -1);
+	LoadDivGraph("./bg.png", cfg_.TILES_X * cfg_.TILES_Y, cfg_.TILES_X, cfg_.TILES_Y, cfg_.TILE_PIX_SIZE, cfg_.TILE_PIX_SIZE, bgHandle.data());
 
-
-	LoadDivGraph("./bg.png", cfg_.TILES_X * cfg_.TILES_Y,
-		cfg_.TILES_X, cfg_.TILES_Y,
-		cfg_.TILE_PIX_SIZE, cfg_.TILE_PIX_SIZE, bgHandle.data());
-
-
-	//LUT(Look Up Table) 作成
 	for (int i = 0; i < bgHandle.size();i++)
 	{
 		HandleToIndex[bgHandle[i]] = i;
@@ -74,13 +57,10 @@ Point MapChip::ScreenToChipIndex(const Point& mouse) const
 
 void MapChip::Update()
 {
-
 	Point mousePos;
 	if (GetMousePoint(&mousePos.x, &mousePos.y) == -1) return;
 
-
 	isInMapChipArea_ = IsInChipArea(mousePos);
-
 
 	if (isInMapChipArea_) {
 		if (Input::IsKeyDown(KEY_INPUT_LEFT))  
@@ -108,8 +88,6 @@ void MapChip::Update()
 	else {
 		isInMapChipArea_ = false;
 	}
-
-
 }
 
 void MapChip::Draw()
@@ -130,7 +108,6 @@ void MapChip::Draw()
 		}
 	}
 
-
 	// ハイライト描画
 	if (isInMapChipArea_) {
 		int x = originX + selected_.x * cfg_.TILE_PIX_SIZE;
@@ -142,7 +119,6 @@ void MapChip::Draw()
 		SetDrawBlendMode(DX_BLENDMODE_NOBLEND, 0);
 		DrawBox(x, y, x + size, y + size, GetColor(255, 0, 0), FALSE, 2);
 	}
-
 
 	// ホールド中チップの描画
 	if (isHold_) {
@@ -158,7 +134,6 @@ void MapChip::Draw()
 			selectedIndex_ = -1;
 		}
 	}
-
 }
 
 bool MapChip::IsHold()
@@ -180,15 +155,5 @@ int MapChip::GetHoldImage()
 
 int MapChip::GetChipIndex(int handle)
 {
-
 	return HandleToIndex[handle];
-
-	//for (int i = 0;i < bgHandle.size();i++)
-	//{
-	//	if (handle == bgHandle[i])
-	//		return i;
-	//}
-	//int a = HandleToIndex[handle];
-	//if(HandleToIndex[handle])
-
 }

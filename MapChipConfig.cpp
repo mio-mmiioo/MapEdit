@@ -6,10 +6,8 @@
 
 // 内部ユーティリティ
 static int ReadIntFromIni(const std::string& section, const std::string& key, int defaultValue, const std::string& iniPath)
-{
-	
+{	
 	int val = GetPrivateProfileIntA(section.c_str(), key.c_str(), defaultValue, iniPath.c_str());
-	//std::cerr << "Read [" << section << "] " << key << " = " << val << " from " << iniPath << std::endl;
 	return val;
 }
 
@@ -28,10 +26,6 @@ MapChipConfig LoadMapChipConfig(const std::string& iniPath)
 
 const MapChipConfig& GetMapChipConfig()
 {
-	//std::ifstream ifs("setting.ini");
-	//if (ifs.good()) {
-	//	MessageBoxA(nullptr, "setting.ini found. Using it for MapChipConfig.", "Info", MB_OK | MB_ICONINFORMATION);
-	//}
 	static MapChipConfig config = LoadMapChipConfig(".\\setting.ini");
 	return config;
 }
