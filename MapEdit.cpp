@@ -115,18 +115,6 @@ void MapEdit::Draw()
 		}
 	}
 
-	//for (int y = 0; y < cfg_.MAPCHIP_VIEW_Y; y++) {
-	//	for (int x = 0; x < cfg_.TILES_X; x++) {
-
-	//		int gx = x + ScrollOffset_.x;
-	//		int gy = y + ScrollOffset_.y;
-	//		int index = gy * cfg_.TILES_X + gx;
-	//		DrawGraph(originX + x * cfg_.TILE_PIX_SIZE,
-	//			originY + y * cfg_.TILE_PIX_SIZE,
-	//			bgHandle[index], TRUE);
-	//	}
-	//}
-
 	for (int j = 0;j < cfg_.MAP_EDIT_VIEW_Y;j++)
 	{
 		for (int i = 0; i < cfg_.MAP_EDIT_VIEW_X; i++)
