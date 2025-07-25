@@ -147,7 +147,7 @@ void MapEdit::Draw()
 	}
 
 	SetDrawBlendMode(DX_BLENDMODE_ALPHA, 128);
-	DrawBox(cfg_.LEFT_MARGIN + 0, cfg_.TOP_MARGIN + 0, cfg_.LEFT_MARGIN + cfg_.MAP_EDIT_VIEW_X * cfg_.MAP_IMAGE_SIZE, cfg_.TOP_MARGIN + cfg_.MAP_EDIT_VIEW_Y * cfg_.MAP_IMAGE_SIZE, GetColor(255, 255, 0), FALSE, 5);
+	DrawBox(cfg_.LEFT_MARGIN + 0, cfg_.TOP_MARGIN + 0, cfg_.LEFT_MARGIN + cfg_.MAP_EDIT_VIEW_X * cfg_.MAP_IMAGE_SIZE, cfg_.TOP_MARGIN + cfg_.MAP_EDIT_VIEW_Y * cfg_.MAP_IMAGE_SIZE, GetColor(255, 255, 0), FALSE);
 	for (int j = 0; j < cfg_.MAP_EDIT_VIEW_Y; j++) {
 		for (int i = 0; i < cfg_.MAP_EDIT_VIEW_X; i++) {
 			DrawLine(cfg_.LEFT_MARGIN + i * cfg_.MAP_IMAGE_SIZE, cfg_.TOP_MARGIN + j * cfg_.MAP_IMAGE_SIZE,

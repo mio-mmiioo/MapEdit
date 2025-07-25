@@ -117,7 +117,7 @@ void MapChip::Draw()
 		SetDrawBlendMode(DX_BLENDMODE_ALPHA, 100);
 		DrawBox(x + 1, y - 1, x + size - 1, y + size + 1, GetColor(255, 255, 0), TRUE);
 		SetDrawBlendMode(DX_BLENDMODE_NOBLEND, 0);
-		DrawBox(x, y, x + size, y + size, GetColor(255, 0, 0), FALSE, 2);
+		DrawBox(x, y, x + size, y + size, GetColor(255, 0, 0), FALSE);
 	}
 
 	// ホールド中チップの描画
